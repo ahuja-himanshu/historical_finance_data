@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+  <head>
+    <title><%= content_for(:title) || "Seasonal Desk — Historical Asset Performance" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="description" content="Month-wise and year-wise historical performance for BTC, ETH, equity indices, and commodities.">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Seasonal Desk">
+    <meta name="mobile-web-app-capable" content="yes">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%# Self-contained Chart.js UMD (window.Chart) — must load before Stimulus controllers %>
+    <script src="/chart.umd.min.js"></script>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="min-h-full antialiased desk-body">
+    <div class="desk-shell">
+      <header class="desk-header">
+        <div class="desk-header-inner">
+          <a href="<%= root_path %>" class="desk-brand" data-turbo="false">
+            <span class="desk-brand-mark" aria-hidden="true"></span>
+            <span>
+              <span class="desk-brand-title">Seasonal Desk</span>
+              <span class="desk-brand-sub">Historical performance · month &amp; year</span>
+            </span>
+          </a>
+          <nav class="desk-nav" aria-label="Primary">
+            <span class="desk-pill">Relative returns</span>
+            <span class="desk-pill desk-pill-muted">Not investment advice</span>
+          </nav>
+        </div>
+      </header>
+
+      <main class="desk-main">
+        <%= yield %>
+      </main>
+
+      <footer class="desk-footer">
+        <p>
+          Month-end closes from seeded historical levels. Returns use prior-period close as base.
+          Past performance is not indicative of future results.
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>

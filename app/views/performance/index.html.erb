@@ -1,0 +1,240 @@
+<% content_for :title, "#{@result[:asset].name} — #{mode_label(@mode)} | Seasonal Desk" %>
+
+<section class="desk-hero fade-in" aria-labelledby="page-heading">
+  <div>
+    <p class="eyebrow">Institutional-style seasonal analytics</p>
+    <h1 id="page-heading">How has <span class="accent"><%= @result[:asset].name %></span> performed?</h1>
+    <p class="lede">
+      Compare calendar-month and full-year relative returns across a multi-year lookback.
+      Figures are signed percentages from historical month-end prices.
+    </p>
+  </div>
+  <div class="hero-meta">
+    <div class="meta-card">
+      <span class="meta-label">As of</span>
+      <span class="meta-value mono"><%= @result[:as_of].strftime("%d %b %Y") %></span>
+    </div>
+    <div class="meta-card">
+      <span class="meta-label">Lookback</span>
+      <span class="meta-value mono"><%= @lookback_years %> years</span>
+    </div>
+    <div class="meta-card">
+      <span class="meta-label">Mode</span>
+      <span class="meta-value"><%= mode_label(@mode) %></span>
+    </div>
+  </div>
+</section>
+
+<section class="control-panel fade-in delay-1" aria-label="Query controls">
+  <%= form_with url: root_path, method: :get, local: true, class: "control-form", data: { controller: "query-form", turbo: false } do %>
+    <div class="control-grid">
+      <label class="field">
+        <span class="field-label">Asset</span>
+        <select name="asset" class="field-input" data-action="change->query-form#submit">
+          <% @assets.each do |asset| %>
+            <option value="<%= asset.key %>" <%= "selected" if asset.key == @asset_key %>>
+              <%= asset.name %> (<%= asset.symbol %>)
+            </option>
+          <% end %>
+        </select>
+      </label>
+
+      <label class="field">
+        <span class="field-label">View</span>
+        <select name="mode" id="mode-select" class="field-input" data-action="change->query-form#toggleMonth change->query-form#submit" data-query-form-target="mode">
+          <option value="month" <%= "selected" if @mode == "month" %>>Month-wise</option>
+          <option value="year" <%= "selected" if @mode == "year" %>>Year-wise</option>
+        </select>
+      </label>
+
+      <label class="field" data-query-form-target="monthField" style="<%= @mode == "year" ? "display:none" : nil %>">
+        <span class="field-label">Calendar month</span>
+        <select name="month" class="field-input" data-action="change->query-form#submit">
+          <% @months.each do |name, num| %>
+            <option value="<%= num %>" <%= "selected" if num == @month %>><%= name %></option>
+          <% end %>
+        </select>
+      </label>
+
+      <label class="field">
+        <span class="field-label">Years of history</span>
+        <select name="lookback" class="field-input" data-action="change->query-form#submit">
+          <% [5, 7, 10, 12, 15].each do |n| %>
+            <option value="<%= n %>" <%= "selected" if n == @lookback_years %>><%= n %> years</option>
+          <% end %>
+        </select>
+      </label>
+
+      <div class="field field-action">
+        <span class="field-label">&nbsp;</span>
+        <button type="submit" class="btn-primary">
+          Update view
+        </button>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="asset-strip" role="list" aria-label="Supported assets">
+    <% @assets.each do |asset| %>
+      <%= link_to root_path(asset: asset.key, mode: @mode, month: @month, lookback: @lookback_years),
+            class: "asset-chip #{'asset-chip-active' if asset.key == @asset_key}",
+            role: "listitem",
+            data: { turbo: false } do %>
+        <span class="asset-chip-name"><%= asset.symbol %></span>
+        <span class="<%= asset_badge_class(asset.category) %>"><%= asset.category.tr("_", " ") %></span>
+      <% end %>
+    <% end %>
+  </div>
+</section>
+
+<% summary = @result[:summary] %>
+<% points = @result[:points] %>
+
+<section class="results-grid fade-in delay-2" aria-label="Performance results">
+  <div class="panel chart-panel">
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title"><%= chart_title(@result) %></h2>
+        <p class="panel-sub">
+          <% if @mode == "month" %>
+            Each bar is <%= @result[:month_name] %> return vs prior month-end close.
+          <% else %>
+            Each bar is calendar-year return vs prior December close. YTD is partial.
+          <% end %>
+        </p>
+      </div>
+      <% if points.any? %>
+        <div class="legend">
+          <span class="legend-item"><i class="swatch swatch-pos"></i> Gain</span>
+          <span class="legend-item"><i class="swatch swatch-neg"></i> Loss</span>
+        </div>
+      <% end %>
+    </div>
+
+    <% if points.any? %>
+      <div
+        class="chart-wrap"
+        data-controller="performance-chart"
+        data-performance-chart-payload-value="<%= ERB::Util.html_escape(chart_json(@result)) %>"
+      >
+        <canvas data-performance-chart-target="canvas" role="img" aria-label="Performance bar chart"></canvas>
+      </div>
+    <% else %>
+      <div class="empty-state">
+        <p>No completed periods available for this selection.</p>
+      </div>
+    <% end %>
+  </div>
+
+  <aside class="panel stats-panel">
+    <h2 class="panel-title">Snapshot</h2>
+    <p class="panel-sub">Summary across completed periods in the series.</p>
+
+    <dl class="stat-list">
+      <div class="stat-row">
+        <dt>Observations</dt>
+        <dd class="mono"><%= summary[:count] %></dd>
+      </div>
+      <div class="stat-row">
+        <dt>Average return</dt>
+        <dd class="mono <%= pct_class(summary[:average_pct]) %>"><%= signed_pct(summary[:average_pct]) %></dd>
+      </div>
+      <div class="stat-row">
+        <dt>Median return</dt>
+        <dd class="mono <%= pct_class(summary[:median_pct]) %>"><%= signed_pct(summary[:median_pct]) %></dd>
+      </div>
+      <div class="stat-row">
+        <dt>Positive years</dt>
+        <dd class="mono pct-positive"><%= summary[:positive_years] %></dd>
+      </div>
+      <div class="stat-row">
+        <dt>Negative years</dt>
+        <dd class="mono pct-negative"><%= summary[:negative_years] %></dd>
+      </div>
+      <div class="stat-row">
+        <dt>Hit rate</dt>
+        <dd class="mono"><%= summary[:win_rate_pct] ? "#{summary[:win_rate_pct].round(1)}%" : "—" %></dd>
+      </div>
+      <% if summary[:best] %>
+        <div class="stat-row">
+          <dt>Best</dt>
+          <dd class="mono pct-positive"><%= summary[:best][:year] %> · <%= signed_pct(summary[:best][:return_pct]) %></dd>
+        </div>
+      <% end %>
+      <% if summary[:worst] %>
+        <div class="stat-row">
+          <dt>Worst</dt>
+          <dd class="mono pct-negative"><%= summary[:worst][:year] %> · <%= signed_pct(summary[:worst][:return_pct]) %></dd>
+        </div>
+      <% end %>
+    </dl>
+  </aside>
+</section>
+
+<section class="panel table-panel fade-in delay-3" aria-label="Tabular returns">
+  <div class="panel-header">
+    <div>
+      <h2 class="panel-title">Detailed series</h2>
+      <p class="panel-sub">
+        Same data as the chart — signed relative percentages with price levels used for the calc.
+      </p>
+    </div>
+  </div>
+
+  <% if points.any? %>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Period</th>
+            <th scope="col">Return</th>
+            <th scope="col">Start (prior close)</th>
+            <th scope="col">End close</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% points.reverse_each do |point| %>
+            <tr class="<%= "row-partial" if point.partial %>">
+              <td class="mono"><%= point.label %></td>
+              <td class="mono <%= pct_class(point.return_pct) %>"><%= signed_pct(point.return_pct) %></td>
+              <td class="mono muted"><%= format_price(point.start_price, @result[:asset]) %></td>
+              <td class="mono muted"><%= format_price(point.end_price, @result[:asset]) %></td>
+              <td>
+                <% if point.partial %>
+                  <span class="status-pill status-ytd">YTD</span>
+                <% else %>
+                  <span class="status-pill status-complete">Complete</span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="empty-state">
+      <p>No rows to display. Try another month or a longer lookback once more history is available.</p>
+    </div>
+  <% end %>
+</section>
+
+<section class="insight-panel fade-in delay-4" aria-label="Reading guide">
+  <h2 class="panel-title">How to read this</h2>
+  <ul class="insight-list">
+    <li>
+      <strong>Month-wise</strong> answers questions like “How has BTC usually done in August?”
+      Each year shows that month’s return only when the month has finished.
+    </li>
+    <li>
+      <strong>Current year</strong> appears for a month only if that calendar month has already completed
+      relative to the as-of date (today: <%= @result[:as_of].strftime("%b %d, %Y") %>).
+    </li>
+    <li>
+      <strong>Year-wise</strong> uses full calendar years. The open year is shown as <em>YTD</em> through the latest completed month.
+    </li>
+    <li>
+      Returns are relative: <span class="mono">((end ÷ start) − 1) × 100</span>. Positive is green, negative is red.
+    </li>
+  </ul>
+</section>

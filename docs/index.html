@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Seasonal Desk — Historical Asset Performance</title>
+    <meta
+      name="description"
+      content="Month-wise and year-wise historical performance for BTC, ETH, equity indices, and commodities."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./css/desk.css" />
+  </head>
+  <body class="desk-body">
+    <div class="desk-shell">
+      <header class="desk-header">
+        <div class="desk-header-inner">
+          <a href="./" class="desk-brand">
+            <span class="desk-brand-mark" aria-hidden="true"></span>
+            <span>
+              <span class="desk-brand-title">Seasonal Desk</span>
+              <span class="desk-brand-sub">Historical performance · month &amp; year</span>
+            </span>
+          </a>
+          <nav class="desk-nav" aria-label="Primary">
+            <span class="desk-pill">Relative returns</span>
+            <span class="desk-pill desk-pill-muted">Not investment advice</span>
+          </nav>
+        </div>
+      </header>
+
+      <main class="desk-main">
+        <p id="boot-error" class="empty-state" hidden></p>
+
+        <section class="desk-hero fade-in" aria-labelledby="page-heading">
+          <div>
+            <p class="eyebrow">Institutional-style seasonal analytics</p>
+            <h1 id="page-heading">How has <span class="accent">Bitcoin</span> performed?</h1>
+            <p class="lede">
+              Compare calendar-month and full-year relative returns across a multi-year lookback.
+              Figures are signed percentages from historical month-end prices.
+            </p>
+          </div>
+          <div class="hero-meta">
+            <div class="meta-card">
+              <span class="meta-label">As of</span>
+              <span class="meta-value mono" id="meta-asof">—</span>
+            </div>
+            <div class="meta-card">
+              <span class="meta-label">Lookback</span>
+              <span class="meta-value mono" id="meta-lookback">—</span>
+            </div>
+            <div class="meta-card">
+              <span class="meta-label">Mode</span>
+              <span class="meta-value" id="meta-mode">Month-wise</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="control-panel fade-in delay-1" aria-label="Query controls">
+          <form id="query-form" class="control-form">
+            <div class="control-grid">
+              <label class="field">
+                <span class="field-label">Asset</span>
+                <select id="asset-select" name="asset" class="field-input"></select>
+              </label>
+              <label class="field">
+                <span class="field-label">View</span>
+                <select id="mode-select" name="mode" class="field-input">
+                  <option value="month" selected>Month-wise</option>
+                  <option value="year">Year-wise</option>
+                </select>
+              </label>
+              <label class="field" id="month-field">
+                <span class="field-label">Calendar month</span>
+                <select id="month-select" name="month" class="field-input"></select>
+              </label>
+              <label class="field">
+                <span class="field-label">Years of history</span>
+                <select id="lookback-select" name="lookback" class="field-input">
+                  <option value="5">5 years</option>
+                  <option value="7">7 years</option>
+                  <option value="10" selected>10 years</option>
+                  <option value="12">12 years</option>
+                  <option value="15">15 years</option>
+                </select>
+              </label>
+              <div class="field field-action">
+                <span class="field-label">&nbsp;</span>
+                <button type="submit" class="btn-primary">Update view</button>
+              </div>
+            </div>
+          </form>
+          <div class="asset-strip" id="asset-strip" role="list" aria-label="Supported assets"></div>
+        </section>
+
+        <section class="results-grid fade-in delay-2" aria-label="Performance results">
+          <div class="panel chart-panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title" id="chart-title">Performance</h2>
+                <p class="panel-sub" id="chart-sub">Signed relative returns by period.</p>
+              </div>
+              <div class="legend">
+                <span class="legend-item"><i class="swatch swatch-pos"></i> Gain</span>
+                <span class="legend-item"><i class="swatch swatch-neg"></i> Loss</span>
+              </div>
+            </div>
+            <div
+              id="chart-bind"
+              data-controller="performance-chart"
+              data-performance-chart-payload=""
+            >
+              <div class="chart-wrap" id="chart-wrap">
+                <canvas id="perf-chart" role="img" aria-label="Performance bar chart"></canvas>
+              </div>
+              <div class="empty-state" id="empty-chart" hidden>
+                <p>No completed periods available for this selection.</p>
+              </div>
+            </div>
+          </div>
+
+          <aside class="panel stats-panel">
+            <h2 class="panel-title">Snapshot</h2>
+            <p class="panel-sub">Summary across completed periods in the series.</p>
+            <dl class="stat-list">
+              <div class="stat-row">
+                <dt>Observations</dt>
+                <dd class="mono" id="stat-count">—</dd>
+              </div>
+              <div class="stat-row">
+                <dt>Average return</dt>
+                <dd class="mono" id="stat-avg">—</dd>
+              </div>
+              <div class="stat-row">
+                <dt>Median return</dt>
+                <dd class="mono" id="stat-median">—</dd>
+              </div>
+              <div class="stat-row">
+                <dt>Positive years</dt>
+                <dd class="mono pct-positive" id="stat-pos">—</dd>
+              </div>
+              <div class="stat-row">
+                <dt>Negative years</dt>
+                <dd class="mono pct-negative" id="stat-neg">—</dd>
+              </div>
+              <div class="stat-row">
+                <dt>Hit rate</dt>
+                <dd class="mono" id="stat-hit">—</dd>
+              </div>
+              <div class="stat-row">
+                <dt>Best</dt>
+                <dd class="mono pct-positive" id="stat-best">—</dd>
+              </div>
+              <div class="stat-row">
+                <dt>Worst</dt>
+                <dd class="mono pct-negative" id="stat-worst">—</dd>
+              </div>
+            </dl>
+          </aside>
+        </section>
+
+        <section class="panel table-panel fade-in delay-3" aria-label="Tabular returns">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">Detailed series</h2>
+              <p class="panel-sub">
+                Same data as the chart — signed relative percentages with price levels used for the calc.
+              </p>
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th scope="col">Period</th>
+                  <th scope="col">Return</th>
+                  <th scope="col">Start (prior close)</th>
+                  <th scope="col">End close</th>
+                  <th scope="col">Status</th>
+                </tr>
+              </thead>
+              <tbody id="series-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="insight-panel fade-in delay-4" aria-label="Reading guide">
+          <h2 class="panel-title">How to read this</h2>
+          <ul class="insight-list">
+            <li>
+              <strong>Month-wise</strong> answers questions like “How has BTC usually done in August?”
+              Each year shows that month’s return only when the month has finished.
+            </li>
+            <li>
+              <strong>Current year</strong> appears for a month only if that calendar month has already
+              completed relative to today.
+            </li>
+            <li>
+              <strong>Year-wise</strong> uses full calendar years. The open year is shown as
+              <em>YTD</em> through the latest completed month.
+            </li>
+            <li>
+              Returns are relative:
+              <span class="mono">((end ÷ start) − 1) × 100</span>. Positive is green, negative is red.
+            </li>
+          </ul>
+        </section>
+      </main>
+
+      <footer class="desk-footer">
+        <p>
+          Static GitHub Pages build of Seasonal Desk. Month-end closes from seeded historical levels.
+          Past performance is not indicative of future results.
+        </p>
+      </footer>
+    </div>
+
+    <script src="./chart.umd.min.js"></script>
+    <script src="./js/performance.js"></script>
+    <script src="./js/app.js"></script>
+  </body>
+</html>
